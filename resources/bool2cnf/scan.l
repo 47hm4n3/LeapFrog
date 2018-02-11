@@ -31,9 +31,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-#define MAX_No_Variables 10000
-#define MAX_Length_String 64
+#include <search.h>
 
 int line_no = 1;
 int variable_index(void);
@@ -51,16 +49,23 @@ int variable_index(void);
 .        { return( yytext[ 0]); }
 %%
 
+/* symbol table for variable names, maps to the corresponding term number */
+static int variable_table[MAX_No_Variables];
+static int* info_ptr = variable_table;
+
+extern int option_signature;
+
 int variable_index(void)
 {
-  static char variable_table[MAX_No_Variables][MAX_Length_String];
-  static int variable_index[MAX_No_Variables];
+  ENTRY item;
+  ENTRY *found_item; /* Name to look for in table. */
 
-  int i;
+  item.key = yytext;
 
-  for( i=0; i < MAX_No_Variables; i++)
-    if( strncmp( variable_table[ i], yytext, MAX_Length_String)==0)
-      return( variable_index[i]);
+  if ((found_item = hsearch(item, FIND)) != NULL)
+    {
+      return *((int*) found_item->data);
+    }
 
   no_variables++; no_terms++;
   if ( no_variables >= MAX_No_Variables)
@@ -68,9 +73,19 @@ int variable_index(void)
       fprintf(stderr, "too many variables\n");
       exit( 1);
     }
- 
-  variable_index[ no_variables -1] = no_terms;
 
-  strncpy( variable_table[ no_variables -1], yytext, MAX_Length_String);
-  return(  variable_index[ no_variables -1]);
+  item.key = strdup(yytext);
+
+  *info_ptr = no_terms;
+  item.data = info_ptr;
+  info_ptr++;
+ 
+  (void) hsearch(item, ENTER);
+
+  if (option_signature)
+    {
+      printf("c var %s %d\n", yytext, no_terms);
+    }
+
+  return no_terms;
 }
