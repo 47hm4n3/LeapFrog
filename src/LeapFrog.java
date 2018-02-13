@@ -1,44 +1,92 @@
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class LeapFrog {
 
-	// public static Stone[] stones;
 	public static int numFrog;
 	public static int numStep;
 	public static int length;
-	public static int empty;
-	public static int step;
-	// public static Stone[] endStones;
+	public static boolean exe;
 
 	public static void main(String[] args) {
 		if (args != null && args.length >= 2) {
-				numFrog = Integer.parseInt(args[0]);
-				numStep = Integer.parseInt(args[1]);
+			numFrog = Integer.parseInt(args[0]);
+			numStep = Integer.parseInt(args[1]);
 		} else {
-			numFrog = 3;
-			numStep = 8;
+			numFrog = 4;
+			numStep = 23;
 		}
-		
+		exe = true;
 		length = 2 * numFrog + 1;
-		step = 0;
-
-		StringBuilder sb = new StringBuilder("");
-		sb.append(initialize(step));
-		sb.append(" & ");
-		for (step = 1; step <= numStep; step++) {
-			sb.append("( ");
-			sb.append(oneStep(step));
-			sb.append(" )");
-			sb.append(" & \n");
-			sb.append(oneStoneTwoFrogs(step));
-			sb.append(" & ");
+		try {
+			Runtime.getRuntime().exec("rm out/result.out");
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		sb.append(end(step - 1));
-		System.out.println(sb.toString());
-		
+		System.out.println("===========Debut de l'execution");
+		run(numFrog, numStep);
+		isSAT();
+		exe = false;
+		System.out.println("===========Fin de l'execution");
+		System.out.println("===========Stats");
+		System.out
+				.println("Le nombre minimal d'etapes pour atteindre la solution est : " + softMinStepsNumber(numFrog));
+		System.out
+				.println("Le nombre minimal d'etapes pour atteindre la solution est : " + hardMinStepsNumber(numFrog));
+		System.out.println("===========Fin");
+	}
+
+	public static void run(int n, int s) {
+		StringBuilder sb = new StringBuilder("");
+		int ss = 1;
+		sb.append(initialize(0));
+		sb.append(" & \n");
+		if (s >= 1) {
+			for (ss = 1; ss <= s; ss++) {
+				sb.append("( ");
+				sb.append(oneStep(ss));
+				sb.append(" )");
+				sb.append(" & \n");
+				sb.append(oneStoneTwoFrogs(ss));
+				sb.append(" & \n");
+			}
+		}
+		sb.append(end(ss - 1));
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter("out/formula.out"));
+			bw.write(sb.toString());
+			bw.close();
+		} catch (IOException e) {
+			System.err.println("File out/formula.out doesn't exist !");
+		}
+
+		try {
+			Process p = new ProcessBuilder().command("resources/bool2cnf/bool2cnf")
+					.redirectInput(new File("out/formula.out")).redirectOutput(new File("out/formula.cnf")).start();
+
+			boolean done = p.waitFor(15, TimeUnit.SECONDS);
+			if (!done) {
+				p.destroy();
+				p.waitFor();
+			}
+
+			Process p1 = new ProcessBuilder().command("/usr/local/bin/minisat")
+					.redirectInput(new File("out/formula.cnf")).redirectOutput(new File("out/result.out")).start();
+
+			boolean done1 = p1.waitFor(15, TimeUnit.SECONDS);
+			if (!done1) {
+				p1.destroy();
+				p1.waitFor();
+			}
+		} catch (IOException | InterruptedException e) {
+			System.err.println("Runtime Error !");
+			e.printStackTrace();
+		}
 	}
 
 	public static String oneStep(int s) {
@@ -195,30 +243,40 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static int softMinStepsNumber (int number) {
-		return number * (number + 2);
+	public static int softMinStepsNumber(int n) {
+		return n * (n + 2);
 	}
-	
-	public static String hardMinStepsNumber () {
+
+	public static boolean isSAT() {
 		String str = "";
-		String beforeLast = "";
 		try {
 			BufferedReader br = new BufferedReader(new FileReader("out/result.out"));
-
 			str = br.readLine();
 			while ((str = br.readLine()) != null) {
-				beforeLast = str;
+				if (exe)
+					System.out.println(str);
+				if (str.contains("SATISFIABLE") && !str.contains("UNSATISFIABLE"))
+					return true;
+				if (str.contains("UNSATISFIABLE"))
+					return false;
 			}
+			br.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("File out/result.out doesn't exist !");
 		}
-		
-		
-		
-		return beforeLast;
-	} 
-	
+		return false;
+	}
+
+	public static int hardMinStepsNumber(int n) {
+		int nbSteps = 1;
+		run(n, nbSteps);
+		while (!isSAT() && nbSteps <= softMinStepsNumber(n) + 3) {
+			nbSteps++;
+			run(n, nbSteps);
+		}
+		return nbSteps;
+	}
+
 	public static String toBool(int s, int min, int max) {
 		StringBuilder sb = new StringBuilder("");
 		switch (max - min) {
