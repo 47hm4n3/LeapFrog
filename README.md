@@ -20,8 +20,8 @@ bool2cnf:
 
 leapFrog:
 
-    Permet de lancer l'execution du programme LeapFrog avec un nombre de grenouilles saisi au clavier, avec la commande (pour n = 3 par exemple)
-    make leapFrog n=3
+    Permet de lancer l'execution du programme LeapFrog avec un nombre de grenouilles "n" et un nombre d'etapes "s" a executer saisis au clavier, avec la commande (pour n = 3 et s = 7 par exemple)
+    make leapFrog n=3 s=7
 
 cleanbool2cnf:
 
