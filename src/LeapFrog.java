@@ -4,22 +4,46 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class LeapFrog {
 
 	public static int numFrog;
 	public static int numStep;
+	public static char[] configIn;
+	public static char[] configOut;
 	public static int length;
 	public static boolean exe;
+	public static boolean rand;
+	private static BufferedReader br;
 
 	public static void main(String[] args) {
-		if (args != null && args.length >= 2) {
+		System.out.println(args.length);
+		if (args != null && args.length == 2) {
 			numFrog = Integer.parseInt(args[0]);
 			numStep = Integer.parseInt(args[1]);
+			configIn = "".toCharArray();
+			configOut = "".toCharArray();
+		} else if (args != null && args.length == 3) {
+			configIn = args[1].toCharArray();
+			configOut = args[2].toCharArray();
+			if (!verifConfigs(configIn, configOut)) {
+				configIn = "".toCharArray();
+				configOut = "".toCharArray();
+				numFrog = (new Random()).nextInt(5) + 1;
+				numStep = (new Random()).nextInt((numFrog * (numFrog + 1) + 1)) + 1;
+			} else {
+				rand = true;
+				length = configIn.length;
+				numFrog = configOut.length / 2;
+				numStep = Integer.parseInt(args[0]);
+			}
 		} else {
-			numFrog = 4;
-			numStep = 23;
+			numFrog = (new Random()).nextInt(5) + 1;
+			numStep = (new Random()).nextInt((numFrog * (numFrog + 1) + 1)) + 1;
+			configIn = "".toCharArray();
+			configOut = "".toCharArray();
 		}
 		exe = true;
 		length = 2 * numFrog + 1;
@@ -29,22 +53,29 @@ public class LeapFrog {
 			e.printStackTrace();
 		}
 		System.out.println("===========Debut de l'execution");
+		System.out.println("===========Grenouilles :" + numFrog + " - Etapes :" + numStep);
 		run(numFrog, numStep);
 		isSAT();
 		exe = false;
 		System.out.println("===========Fin de l'execution");
-		System.out.println("===========Stats");
-		System.out
-				.println("Le nombre minimal d'etapes pour atteindre la solution est : " + softMinStepsNumber(numFrog));
-		System.out
-				.println("Le nombre minimal d'etapes pour atteindre la solution est : " + hardMinStepsNumber(numFrog));
-		System.out.println("===========Fin");
+		System.out.println("===========Debut stats");
+		if (!rand)
+			System.out.println("Le nombre minimal d'etapes pour atteindre la solution est : "
+					+ softMinStepsNumber(numFrog) + ", calcul par formule");
+		System.out.println("Calcul en cours ...");
+		// Commenter cette ligne pour avoir le formule booleenne de l'execution
+		System.out.println("Le nombre minimal d'etapes pour atteindre la solution est : " + hardMinStepsNumber(numFrog)
+				+ ", calcul par tatonnement");
+		System.out.println("===========Fin stats");
 	}
 
 	public static void run(int n, int s) {
 		StringBuilder sb = new StringBuilder("");
 		int ss = 1;
-		sb.append(initialize(0));
+		if (configIn.length == 0)
+			sb.append(initialize(0));
+		else
+			sb.append(config(0, configIn));
 		sb.append(" & \n");
 		if (s >= 1) {
 			for (ss = 1; ss <= s; ss++) {
@@ -56,7 +87,10 @@ public class LeapFrog {
 				sb.append(" & \n");
 			}
 		}
-		sb.append(end(ss - 1));
+		if (configOut.length == 0)
+			sb.append(end(ss - 1));
+		else
+			sb.append(config(ss - 1, configOut));
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter("out/formula.out"));
 			bw.write(sb.toString());
@@ -84,7 +118,8 @@ public class LeapFrog {
 				p1.waitFor();
 			}
 		} catch (IOException | InterruptedException e) {
-			System.err.println("Runtime Error !");
+			System.err.println(
+					"Execution Error ! \n Bool2cnf or Minisat not installed try this command :\n make bool2cnf && make minisat");
 			e.printStackTrace();
 		}
 	}
@@ -231,6 +266,21 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
+	public static String config(int s, char[] tab) {
+		StringBuilder sb = new StringBuilder("");
+		for (int j = 0; j < tab.length; j++) {
+			if (tab[j] == 'x')
+				sb.append("(x" + j + "_" + s + " & " + "!y" + j + "_" + s + ")");
+			else if (tab[j] == 'y')
+				sb.append("(!x" + j + "_" + s + " & " + "y" + j + "_" + s + ")");
+			else if (tab[j] == 'V')
+				sb.append("(" + "!x" + j + "_" + s + " & " + "!y" + j + "_" + s + ")");
+			sb.append(" & ");
+		}
+		sb.delete(sb.length() - 2, sb.length());
+		return sb.toString();
+	}
+
 	public static String oneStoneTwoFrogs(int s) {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("( ");
@@ -250,7 +300,7 @@ public class LeapFrog {
 	public static boolean isSAT() {
 		String str = "";
 		try {
-			BufferedReader br = new BufferedReader(new FileReader("out/result.out"));
+			br = new BufferedReader(new FileReader("out/result.out"));
 			str = br.readLine();
 			while ((str = br.readLine()) != null) {
 				if (exe)
@@ -271,10 +321,55 @@ public class LeapFrog {
 		int nbSteps = 1;
 		run(n, nbSteps);
 		while (!isSAT() && nbSteps <= softMinStepsNumber(n) + 3) {
+			System.out.println("***Etape : " + nbSteps);
 			nbSteps++;
 			run(n, nbSteps);
 		}
 		return nbSteps;
+	}
+
+	public static boolean verifConfigs(char[] in, char[] out) {
+
+		if (in.length == out.length) {
+			if (check(in) && check(out)) {
+				int cix = count(in, 'x');
+				int ciy = count(in, 'y');
+				int cox = count(out, 'x');
+				int coy = count(out, 'y');
+				if ((cix == ciy) && (cox == coy) && (cix == cox) && (ciy == coy) && (count(in, 'V') == 1)
+						&& (count(out, 'V') == 1)) {
+					return true;
+				} else
+					System.err.println("The two configurations are incompatible !\n" + String.valueOf(in) + "\nand\n"
+							+ String.valueOf(out));
+			} else
+				System.err.println("The two configurations are incompatible !\n" + String.valueOf(in) + "\nand\n"
+						+ String.valueOf(out));
+		} else
+			System.err.println("The two configurations are incompatible !\n" + String.valueOf(in) + "\nand\n"
+					+ String.valueOf(out));
+
+		return false;
+	}
+
+	private static int count(char[] chars, char c) {
+		int cpt = 0;
+		for (int i = 0; i < chars.length; i++) {
+			if (chars[i] == c)
+				cpt++;
+		}
+		return cpt;
+	}
+
+	private static boolean check(char[] chars) {
+		String str = "";
+		for (int i = 0; i < chars.length; i++) {
+			if (!str.contains(chars[i] + ""))
+				str += chars[i];
+		}
+		if (str.length() == 3)
+			return true;
+		return false;
 	}
 
 	public static String toBool(int s, int min, int max) {
