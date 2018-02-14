@@ -17,9 +17,12 @@ Fichiers :
 Instructions :
 
     Pour pouvoir executer le programme il faut avoir prealablement installe
-    le SAT solver minisat (si necessaire modifier la ligne qui appel minisat
-    lors de l'execution)
-    Un dossier minisat se trouve dans ressources si besoin
+    le SAT solver "minisat" (si necessaire modifier la ligne qui appelle minisat
+    dans le programme)
+    Un dossier minisat se trouve dans ressources pour le compiler
+    [Sur macOS X minisat generait des erreurs en le compilant]
+    Si minisat est installe sur votre machine alors le programme devrait s'executer
+    normalement car il execute /usr/local/bin/minisat (ligne 114 dans LeapFrog.java)
 
 make :
 

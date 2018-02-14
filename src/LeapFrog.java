@@ -19,7 +19,6 @@ public class LeapFrog {
 	private static BufferedReader br;
 
 	public static void main(String[] args) {
-		System.out.println(args.length);
 		if (args != null && args.length == 2) {
 			numFrog = Integer.parseInt(args[0]);
 			numStep = Integer.parseInt(args[1]);
@@ -33,6 +32,9 @@ public class LeapFrog {
 				configOut = "".toCharArray();
 				numFrog = (new Random()).nextInt(5) + 1;
 				numStep = (new Random()).nextInt((numFrog * (numFrog + 1) + 1)) + 1;
+				System.out.println("======================================================");
+				System.out.println("================== Execution random ==================");
+				System.out.println("======================================================");
 			} else {
 				rand = true;
 				length = configIn.length;
@@ -69,28 +71,31 @@ public class LeapFrog {
 		System.out.println("===========Fin stats");
 	}
 
-	public static void run(int n, int s) {
+	private static void run(int n, int s) {
 		StringBuilder sb = new StringBuilder("");
 		int ss = 1;
 		if (configIn.length == 0)
 			sb.append(initialize(0));
 		else
 			sb.append(config(0, configIn));
-		sb.append(" & \n");
+		sb.append(" & \n\n");
 		if (s >= 1) {
 			for (ss = 1; ss <= s; ss++) {
 				sb.append("( ");
 				sb.append(oneStep(ss));
 				sb.append(" )");
-				sb.append(" & \n");
+				sb.append(" & \n\n");
 				sb.append(oneStoneTwoFrogs(ss));
-				sb.append(" & \n");
+				sb.append(" & \n\n");
 			}
 		}
 		if (configOut.length == 0)
 			sb.append(end(ss - 1));
 		else
 			sb.append(config(ss - 1, configOut));
+		sb.append(" & \n\n");
+		sb.append(doubleSteps(n, s));
+
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter("out/formula.out"));
 			bw.write(sb.toString());
@@ -124,7 +129,7 @@ public class LeapFrog {
 		}
 	}
 
-	public static String oneStep(int s) {
+	private static String oneStep(int s) {
 		StringBuilder sb = new StringBuilder("");
 		for (int i = 0; i < length; i++) {
 			sb.append("( ");
@@ -136,7 +141,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String moveOneBox(int s, int i) {
+	private static String moveOneBox(int s, int i) {
 		StringBuilder sb = new StringBuilder("");
 		String str1 = jumpToRight(s, i);
 		sb.append(str1);
@@ -162,7 +167,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String jumpToRight(int s, int i) {
+	private static String jumpToRight(int s, int i) {
 		StringBuilder sb = new StringBuilder("");
 		if ((i + 1) < length) {
 			sb.append("( ");
@@ -178,7 +183,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String jumpToLeft(int s, int i) {
+	private static String jumpToLeft(int s, int i) {
 		StringBuilder sb = new StringBuilder("");
 		if ((i - 1) >= 0) {
 			sb.append("( ");
@@ -194,7 +199,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String jumpOverRight(int s, int i) {
+	private static String jumpOverRight(int s, int i) {
 		StringBuilder sb = new StringBuilder("");
 		if ((i + 2) < length) {
 			sb.append("( ");
@@ -212,7 +217,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String jumpOverLeft(int s, int i) {
+	private static String jumpOverLeft(int s, int i) {
 		StringBuilder sb = new StringBuilder("");
 		if ((i - 2) >= 0) {
 			sb.append("( ");
@@ -230,7 +235,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String initialize(int s) {
+	private static String initialize(int s) {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("( ");
 		for (int j = 0; j < length / 2; j++) {
@@ -248,7 +253,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String end(int s) {
+	private static String end(int s) {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("( ");
 		for (int j = 0; j < length / 2; j++) {
@@ -266,7 +271,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String config(int s, char[] tab) {
+	private static String config(int s, char[] tab) {
 		StringBuilder sb = new StringBuilder("");
 		for (int j = 0; j < tab.length; j++) {
 			if (tab[j] == 'x')
@@ -281,7 +286,7 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
-	public static String oneStoneTwoFrogs(int s) {
+	private static String oneStoneTwoFrogs(int s) {
 		StringBuilder sb = new StringBuilder("");
 		sb.append("( ");
 		for (int j = 0; j < length; j++) {
@@ -293,11 +298,31 @@ public class LeapFrog {
 		return sb.toString();
 	}
 
+	private static String doubleSteps(int n, int s) {
+		StringBuilder sb = new StringBuilder("");
+		for (int i = 0; i <= s; i++) {
+			for (int j = i + 1; j <= s; j++) {
+				sb.append("( ");
+				for (int k = 0; k < length; k++) {
+					sb.append("!(x" + k + "_" + j + " = " + "x" + k + "_" + i + ") | !(y" + k + "_" + j + " = " + "y"
+							+ k + "_" + i + ")");
+					sb.append(" | ");
+				}
+				sb.setLength(sb.length() - 3);
+				sb.append(" )");
+				sb.append(" &\n");
+			}
+		}
+		if (sb.length() > 3)
+			sb.setLength(sb.length() - 3);
+		return sb.toString();
+	}
+
 	public static int softMinStepsNumber(int n) {
 		return n * (n + 2);
 	}
 
-	public static boolean isSAT() {
+	private static boolean isSAT() {
 		String str = "";
 		try {
 			br = new BufferedReader(new FileReader("out/result.out"));
@@ -317,7 +342,7 @@ public class LeapFrog {
 		return false;
 	}
 
-	public static int hardMinStepsNumber(int n) {
+	private static int hardMinStepsNumber(int n) {
 		int nbSteps = 1;
 		run(n, nbSteps);
 		while (!isSAT() && nbSteps <= softMinStepsNumber(n) + 3) {
@@ -325,10 +350,12 @@ public class LeapFrog {
 			nbSteps++;
 			run(n, nbSteps);
 		}
+		if (!(nbSteps < (softMinStepsNumber(n) + 3)))
+			nbSteps = -1;
 		return nbSteps;
 	}
 
-	public static boolean verifConfigs(char[] in, char[] out) {
+	private static boolean verifConfigs(char[] in, char[] out) {
 
 		if (in.length == out.length) {
 			if (check(in) && check(out)) {
@@ -372,7 +399,7 @@ public class LeapFrog {
 		return false;
 	}
 
-	public static String toBool(int s, int min, int max) {
+	private static String toBool(int s, int min, int max) {
 		StringBuilder sb = new StringBuilder("");
 		switch (max - min) {
 		case 1:
